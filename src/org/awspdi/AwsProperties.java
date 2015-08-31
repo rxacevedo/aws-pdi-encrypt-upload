@@ -24,8 +24,6 @@ public class AwsProperties {
     	            System.out.println(filename + " can't find ");
     		} else {
     			prop.load(input);
-                accessKey = prop.getProperty("accessKey");
-                secretAccessKey = prop.getProperty("secretAccessKey");
                 s3bucket = prop.getProperty("s3bucket");
                 keyDir = prop.getProperty("keyDir");
                 dataDir = prop.getProperty("dataDir");

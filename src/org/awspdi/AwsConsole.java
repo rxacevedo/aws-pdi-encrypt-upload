@@ -6,12 +6,14 @@ import org.awspdi.encrypt.GenerateSymmetricMasterKey;
 public class AwsConsole {
 	// TODO Make argument
 	public final static String fileName = "DimDate.csv";
+	public final static String propertiesPath = "aws.properties";
+	public final static String profilePath = "aws.profile";
 
 	public static void main(String[] args) {	    
 		
 		// Get Properties used in the process
 		AwsProperties awsProperties = 
-				new AwsProperties("aws.properties");
+				new AwsProperties(propertiesPath);
 		
 		// Initialize a  new key to be used
 		GenerateSymmetricMasterKey newKey = new GenerateSymmetricMasterKey(awsProperties.getKeyDir(),"DimDate"); 
@@ -24,9 +26,9 @@ public class AwsConsole {
 				awsProperties.dataDir + "/" + gzipFileName);
 		
 		SecretKey mySymmetricKey = newKey.loadSymmetricAESKey("AES");
-        S3Service.uploadToS3(awsProperties.s3bucket, awsProperties.dataDir + "/" + gzipFileName,
-        		mySymmetricKey);
-//        S3Service.uploadToS3Unencrypted(awsProperties.s3bucket, awsProperties.dataDir + "/" + gzipFileName);
+//        S3Service.uploadToS3(awsProperties.s3bucket, awsProperties.dataDir + "/" + gzipFileName,
+//        		mySymmetricKey, propertiesLocation);
+        S3Service.uploadToS3Unencrypted(awsProperties.s3bucket, awsProperties.dataDir + "/" + gzipFileName, profilePath);
         
 		// TODO Get list of files for encryption
 		// TODO Get AWS connection and establish connection

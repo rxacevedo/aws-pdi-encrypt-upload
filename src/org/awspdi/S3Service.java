@@ -8,6 +8,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.auth.profile.ProfilesConfigFile;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
@@ -37,25 +38,15 @@ import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
 public class S3Service {
     private static final String objectKey = UUID.randomUUID().toString();
 
-    public static void uploadToS3(String bucketName, String filePath, SecretKey mySymmetricKey) {
+    private static final Region usWest2 = Region.getRegion(Regions.US_WEST_2);
+
+    public static void uploadToS3(String bucketName, String filePath, SecretKey mySymmetricKey, 
+    		String profilePath) {
 
         /*
-         * The ProfileCredentialsProvider will return your [AWSPOC]
-         * credential profile by reading from the credentials file located at
-         * (/Users/<Username>/.aws/credentials).
+         * The ProfileCredentialsProvider will return credentials from properties file
          */
-        AWSCredentials credentials = null;
-        try {
-            credentials = new ProfileCredentialsProvider("AWSPOC").getCredentials();
-        } catch (Exception e) {
-            throw new AmazonClientException(
-                    "Cannot load the credentials from the credential profiles file. " +
-                    "Please make sure that your credentials file is at the correct " +
-                    "location (/Users/Aenarion/.aws/credentials), and is in valid format.",
-                    e);
-        }
-
-        Region usWest2 = Region.getRegion(Regions.US_WEST_2);
+        AWSCredentials credentials = setupAWSCredentials(profilePath);
         //AmazonS3 s3 = new AmazonS3Client(credentials);
         //s3.setRegion(usWest2);
         
@@ -99,25 +90,15 @@ public class S3Service {
         }
     }
 
-    public static void uploadToS3Unencrypted(String bucketName, String filePath) {
+    public static void uploadToS3Unencrypted(String bucketName, String filePath, String profilePath) {
 
         /*
          * The ProfileCredentialsProvider will return your [AWSPOC]
          * credential profile by reading from the credentials file located at
          * (/Users/<Username>/.aws/credentials).
          */
-        AWSCredentials credentials = null;
-        try {
-            credentials = new ProfileCredentialsProvider("AWSPOC").getCredentials();
-        } catch (Exception e) {
-            throw new AmazonClientException(
-                    "Cannot load the credentials from the credential profiles file. " +
-                    "Please make sure that your credentials file is at the correct " +
-                    "location (/Users/Aenarion/.aws/credentials), and is in valid format.",
-                    e);
-        }
+        AWSCredentials credentials = setupAWSCredentials(profilePath);
 
-        Region usWest2 = Region.getRegion(Regions.US_WEST_2);
         AmazonS3 s3 = new AmazonS3Client(credentials);
         s3.setRegion(usWest2);
 
@@ -149,5 +130,18 @@ public class S3Service {
                     + "such as not being able to access the network.");
             System.out.println("Error Message: " + ace.getMessage());
         }
+    }
+    
+    private static AWSCredentials setupAWSCredentials(String profilePath) {
+    	AWSCredentials credentials = null;
+        try {
+        	ProfilesConfigFile profileConfig = new ProfilesConfigFile(profilePath);
+            credentials = new ProfileCredentialsProvider(profileConfig ,"AWSProfile").getCredentials();
+        } catch (Exception e) {
+            throw new AmazonClientException(
+                    "Cannot load the credentials from the credential profiles file.",
+                    e);
+        }
+    	return credentials;
     }
 }
