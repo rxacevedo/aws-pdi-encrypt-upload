@@ -14,6 +14,8 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3EncryptionClient;
+import com.amazonaws.services.s3.model.CryptoConfiguration;
+import com.amazonaws.services.s3.model.CryptoMode;
 import com.amazonaws.services.s3.model.EncryptionMaterials;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
@@ -52,9 +54,12 @@ public class S3Service {
         
         EncryptionMaterials encryptionMaterials = new EncryptionMaterials(
                 mySymmetricKey);
+        
+        // CryptoConfiguration requires: Java Cryptography Extension (JCE) Unlimited 
         AmazonS3EncryptionClient encryptionClient = new AmazonS3EncryptionClient(
         		credentials,
-                new StaticEncryptionMaterialsProvider(encryptionMaterials));
+                new StaticEncryptionMaterialsProvider(encryptionMaterials),
+                new CryptoConfiguration(CryptoMode.AuthenticatedEncryption));
         encryptionClient.setRegion(usWest2);
 
         try {

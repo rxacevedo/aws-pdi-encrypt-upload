@@ -26,9 +26,9 @@ public class AwsConsole {
 				awsProperties.dataDir + "/" + gzipFileName);
 		
 		SecretKey mySymmetricKey = newKey.loadSymmetricAESKey("AES");
-//        S3Service.uploadToS3(awsProperties.s3bucket, awsProperties.dataDir + "/" + gzipFileName,
-//        		mySymmetricKey, propertiesLocation);
-        S3Service.uploadToS3Unencrypted(awsProperties.s3bucket, awsProperties.dataDir + "/" + gzipFileName, profilePath);
+        S3Service.uploadToS3(awsProperties.s3bucket, awsProperties.dataDir + "/" + gzipFileName,
+        		mySymmetricKey, profilePath);
+//        S3Service.uploadToS3Unencrypted(awsProperties.s3bucket, awsProperties.dataDir + "/" + gzipFileName, profilePath);
         
 		// TODO Get list of files for encryption
 		// TODO Get AWS connection and establish connection
