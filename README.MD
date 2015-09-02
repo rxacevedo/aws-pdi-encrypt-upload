@@ -9,12 +9,15 @@ A tiny app that can:
 
 Create the following files and specify the values as seen below:
 
-**aws.profile**  
+**aws.profile** 
+```
 [AWSProfile]  
 aws_access_key_id=  
 aws_secret_access_key=  
+```
 
 **aws.properties**  
+```
 # Bucket on S3 to upload to   
 s3bucket=   
 # Directory where to store the encrypted key output (used for symmetric master)   
@@ -31,7 +34,12 @@ useKMS=true
 # Algorithm to be used and key length   
 algorithm=AES   
 algorithmKeyLength=256   
+```
 
+## Run
+Need to pass the following arguments:
+- fileName
+- propertiesPath
 
 
 
