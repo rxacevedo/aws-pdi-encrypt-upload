@@ -13,6 +13,12 @@ public class AwsProperties {
 	String s3bucket;
 	String keyDir;
 	String dataDir;
+	String kms_cmk_id;
+	String awsProfilePath;
+	String algorithm;
+	int algorithmKeyLength;
+	boolean useKMS;
+	boolean sendEncrypted;
 	
 	public AwsProperties(String filename) {
 
@@ -27,6 +33,15 @@ public class AwsProperties {
                 s3bucket = prop.getProperty("s3bucket");
                 keyDir = prop.getProperty("keyDir");
                 dataDir = prop.getProperty("dataDir");
+                kms_cmk_id = prop.getProperty("kms_cmk_id");
+                awsProfilePath = prop.getProperty("awsProfilePath");
+                algorithm = prop.getProperty("algorithm");
+                algorithmKeyLength = Integer.parseInt(prop.getProperty("algorithmKeyLength"));
+                
+                // Defaults to use KMS
+                useKMS = ("true".equals((String) prop.getProperty("useKMS")) ? true : false);
+                // Defaults to send encrypted
+                sendEncrypted = ("false".equals((String) prop.getProperty("sendEncrypted")) ? false : true);
     		}
     	} catch (IOException ex) {
     		ex.printStackTrace();
@@ -39,6 +54,10 @@ public class AwsProperties {
         		}
         	}
         }
+	}
+
+	public InputStream getInput() {
+		return input;
 	}
 
 	public String getAccessKey() {
@@ -59,5 +78,25 @@ public class AwsProperties {
 
 	public String getDataDir() {
 		return dataDir;
+	}
+
+	public String getKms_cmk_id() {
+		return kms_cmk_id;
+	}
+
+	public String getAwsProfilePath() {
+		return awsProfilePath;
+	}
+
+	public String getAlgorithm() {
+		return algorithm;
+	}
+
+	public int getAlgorithmKeyLength() {
+		return algorithmKeyLength;
+	}
+
+	public boolean isUseKMS() {
+		return useKMS;
 	}
 }

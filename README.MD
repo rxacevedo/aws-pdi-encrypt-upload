@@ -15,9 +15,23 @@ aws_access_key_id=
 aws_secret_access_key=  
 
 **aws.properties**  
-s3bucket=  
-keyDir=  
-dataDir=  
+# Bucket on S3 to upload to   
+s3bucket=   
+# Directory where to store the encrypted key output (used for symmetric master)   
+keyDir=   
+# Directory where to handle data file   
+dataDir=   
+# Local AWS profile path   
+awsProfilePath=   
+# In case of KMS, the id to be used   
+kms_cmk_id=   
+# true or false on whether to sendEncrypted and to use KMS. Default is to send encrypted without KMS   
+sendEncrypted=true   
+useKMS=true   
+# Algorithm to be used and key length   
+algorithm=AES   
+algorithmKeyLength=256   
+
 
 
 

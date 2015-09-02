@@ -4,6 +4,8 @@ import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
+import org.awspdi.encrypt.GenerateSymmetricMasterKey;
+
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
@@ -17,6 +19,8 @@ import com.amazonaws.services.s3.AmazonS3EncryptionClient;
 import com.amazonaws.services.s3.model.CryptoConfiguration;
 import com.amazonaws.services.s3.model.CryptoMode;
 import com.amazonaws.services.s3.model.EncryptionMaterials;
+import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
 
@@ -38,8 +42,8 @@ import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
  * http://aws.amazon.com/security-credentials
  */
 public class S3Service {
+	private static AmazonS3EncryptionClient encryptionClient;
     private static final String objectKey = UUID.randomUUID().toString();
-
     private static final Region usWest2 = Region.getRegion(Regions.US_WEST_2);
 
     public static void uploadToS3(String bucketName, String filePath, SecretKey mySymmetricKey, 
@@ -56,7 +60,7 @@ public class S3Service {
                 mySymmetricKey);
         
         // CryptoConfiguration requires: Java Cryptography Extension (JCE) Unlimited 
-        AmazonS3EncryptionClient encryptionClient = new AmazonS3EncryptionClient(
+        encryptionClient = new AmazonS3EncryptionClient(
         		credentials,
                 new StaticEncryptionMaterialsProvider(encryptionMaterials),
                 new CryptoConfiguration(CryptoMode.AuthenticatedEncryption));
@@ -76,8 +80,15 @@ public class S3Service {
             System.out.println("Uploading a new object to S3 from a file\n");
             // s3.putObject(new PutObjectRequest(bucketName, objectKey, fileToUpload));
             
+            ObjectMetadata metadata = new ObjectMetadata();
+            // x-amz-meta-x-amz-iv
+//            metadata.addUserMetadata("x-amz-iv", "");
+            // x-amz-meta-x-amz-key
+            metadata.addUserMetadata("x-amz-key", 
+            		GenerateSymmetricMasterKey.friendlyKey(mySymmetricKey));
+            
             encryptionClient.putObject(new PutObjectRequest(bucketName, objectKey,
-	        		fileToUpload));
+	        		fileToUpload).withMetadata(metadata));
 
         } catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means your request made it "
@@ -148,5 +159,24 @@ public class S3Service {
                     e);
         }
     	return credentials;
+    }
+    
+    public static void uploadWithKMSKey(String bucketName, String filePath, 
+    		String profilePath, String kms_cmk_id) {
+
+        AWSCredentials credentials = setupAWSCredentials(profilePath);
+        KMSEncryptionMaterialsProvider materialProvider = new KMSEncryptionMaterialsProvider(kms_cmk_id);
+    	File fileToUpload = new File(filePath);
+
+        encryptionClient = new AmazonS3EncryptionClient(
+        		credentials,
+        		materialProvider,
+                new CryptoConfiguration().withKmsRegion(Regions.US_EAST_1));
+        encryptionClient.setRegion(Region.getRegion(Regions.US_EAST_1));
+        
+        // Upload object using the encryption client.
+        encryptionClient.putObject(new PutObjectRequest(bucketName, objectKey, fileToUpload));
+        
+        System.out.println("Upload complete!");
     }
 }
