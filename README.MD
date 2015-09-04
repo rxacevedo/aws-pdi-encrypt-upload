@@ -18,22 +18,38 @@ aws_secret_access_key=
 
 **aws.properties**  
 ```
-# Bucket on S3 to upload to   
-s3bucket=   
-# Directory where to store the encrypted key output (used for symmetric master)   
-keyDir=   
-# Directory where to handle data file   
-dataDir=   
-# Local AWS profile path   
-awsProfilePath=   
-# In case of KMS, the id to be used   
-kms_cmk_id=   
-# true or false on whether to sendEncrypted and to use KMS. Default is to send encrypted without KMS   
-sendEncrypted=true   
-useKMS=true   
-# Algorithm to be used and key length   
+# Base64 encoded AES 256 bit symmetric master key.    
+# Leave blank to generate one automatically   
+masterSymmetricKey=   
 algorithm=AES   
 algorithmKeyLength=256   
+
+# S3 properties   
+# Check yours @ http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region      
+s3endpoint=   
+s3region=   
+# Bucket to upload data.   
+s3bucket=   
+# S3 prefix for batch load   
+s3prefix=   
+# Amazon profile path   
+awsProfilePath=   
+
+# Request retry count   
+retryCount=10   
+
+
+# Source directory on local   
+srcDir=   
+# Directory to store generated key file   
+keyDir=   
+# Directory to store encrypted data for upload (can be same as srcDir)   
+dataDir=   
+
+# default true   
+sendEncrypted=true   
+# default true   
+enableZip=false     
 ```
 
 ## Run

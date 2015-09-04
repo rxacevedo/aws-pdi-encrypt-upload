@@ -4,10 +4,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
-import java.util.Base64;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -16,40 +17,65 @@ import javax.crypto.spec.SecretKeySpec;
 import org.awspdi.AwsProperties;
 import org.junit.Assert;
 
+import org.apache.commons.codec.binary.Base64;
+
+/**
+ * 
+ * @author Kristofer Ranström
+ *
+ */
 public class GenerateSymmetricMasterKey {
 
-    private static String keyDir; 
+	private static String keyDir; 
     private static String keyName;
-    private final String keyFileEnding = ".key";
+    private static String symmetricMasterKey;
     
-    public GenerateSymmetricMasterKey(AwsProperties awsProperties, String keyName)  {
+    /**
+     * 
+     * @param keyDirectory to where key is saved
+     * @param keyFileName name of key file
+     * @param algorithm used for generator
+     * @param algorithmKeyLength for initializing
+     */
+    public GenerateSymmetricMasterKey(final String keyDirectory,
+    		final String keyFileName, final String algorithm, 
+    		final int algorithmKeyLength) {
     	this.setKeyDir(keyDir);
-    	this.setKeyName(keyName);
-        
-        //Generate symmetric 256 bit AES key.
-        KeyGenerator symKeyGenerator;
+    	this.setKeyName(keyFileName);
+    	
+		KeyGenerator keyGen;
 		try {
-			symKeyGenerator = KeyGenerator.getInstance(awsProperties.getAlgorithm());
-	        symKeyGenerator.init(awsProperties.getAlgorithmKeyLength());
-	        
-	        SecretKey symKey = symKeyGenerator.generateKey();
+			keyGen = KeyGenerator.getInstance(algorithm);
+			keyGen.init(algorithmKeyLength);
+			
+		    SecretKey symKey = keyGen.generateKey();
+		    symmetricMasterKey =  new String(Base64.encodeBase64(
+		    		symKey.getEncoded()));
+		    
+	        System.out.println("Symmetric key saved  (base 64): "
+	        		+ symmetricMasterKey);
 	        
 	        //Save key.
-	        saveSymmetricKey(keyDir, symKey);
+//	        saveSymmetricKey(keyDir, symKey);
 	        
 	        //Load key.
-	        SecretKey symKeyLoaded = loadSymmetricAESKey(awsProperties.getAlgorithm());
-	        Assert.assertTrue(Arrays.equals(symKey.getEncoded(), symKeyLoaded.getEncoded()));
+//	        SecretKey symKeyLoaded = loadSymmetricAESKey(awsProperties.getAlgorithm());
+//	        Assert.assertTrue(Arrays.equals(symKey.getEncoded(), symKeyLoaded.getEncoded()));
 	        
-	        printKey(symKeyLoaded);
-	        
-		} catch (NoSuchAlgorithmException | IOException e) {
+		} catch (NoSuchAlgorithmException e1) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e1.printStackTrace();
 		}
     }
 
-    public static void saveSymmetricKey(String path, SecretKey secretKey) 
+    /**
+     * 
+     * @param path path for saving
+     * @param secretKey name
+     * @throws IOException e
+     */
+    public static void saveSymmetricKey(final String path, 
+    		final SecretKey secretKey) 
         throws IOException {
         X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(
                 secretKey.getEncoded());
@@ -59,10 +85,15 @@ public class GenerateSymmetricMasterKey {
         keyfos.close();
     }
     
-    public SecretKey loadSymmetricAESKey (String algorithm) {
+    /**
+     * 
+     * @param algorithm ag
+     * @return the secret key
+     */
+    public final SecretKey loadSymmetricAESKey(final String algorithm) {
         //Read private key from file.
         File keyFile = new File(keyDir + "/" + keyName);
-        byte[] encodedPrivateKey = new byte[(int)keyFile.length()];
+        byte[] encodedPrivateKey = new byte[(int) keyFile.length()];
         try {
             FileInputStream keyfis = new FileInputStream(keyFile);
 			keyfis.read(encodedPrivateKey);
@@ -76,7 +107,7 @@ public class GenerateSymmetricMasterKey {
         return new SecretKeySpec(encodedPrivateKey, algorithm);
     }
 
-	public String getKeyDir() {
+    public String getKeyDir() {
 		return keyDir;
 	}
 
@@ -89,21 +120,10 @@ public class GenerateSymmetricMasterKey {
 	}
 
 	public void setKeyName(String keyName) {
-		GenerateSymmetricMasterKey.keyName = keyName + keyFileEnding;
+		GenerateSymmetricMasterKey.keyName = keyName;
 	}
-	
-	public void printKey(SecretKey secretKey) {
-		String decodedKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
-		System.out.println(decodedKey);
-	}
-	
-	public static String friendlyKey(SecretKey secretKey) {
-		String decodedKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
-		return decodedKey;
-	}
-	
-	public static String friendlyIV(SecretKey secretKey) {
-		String decodedKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
-		return decodedKey;
+
+	public String getSymmetricMasterKey() {
+		return symmetricMasterKey;
 	}
 }

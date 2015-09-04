@@ -5,21 +5,35 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * 
+ * @author Kristofer Ranström
+ *
+ */
 public class CompressFileGzip {
-	public void gzipFile(String source_filepath, String destinaton_zip_filepath) {
+	
+	/**
+	 * 
+	 * @param sourceFilepath source file
+	 * @param destinatonZipFilepath (.gzip will be added)
+	 */
+	public final void gzipFile(final String sourceFilepath, 
+			final String destinatonZipFilepath) {
 
 		byte[] buffer = new byte[1024];
 
 		try {
 			
-			FileOutputStream fileOutputStream =new FileOutputStream(destinaton_zip_filepath);
-			GZIPOutputStream gzipOuputStream = new GZIPOutputStream(fileOutputStream);
-			FileInputStream fileInput = new FileInputStream(source_filepath);
+			FileOutputStream fileOutputStream = 
+					new FileOutputStream(destinatonZipFilepath + ".gzip");
+			GZIPOutputStream gzipOuputStream = 
+					new GZIPOutputStream(fileOutputStream);
+			FileInputStream fileInput = new FileInputStream(sourceFilepath);
 
-			int bytes_read;
+			int bytesRead;
 			
-			while ((bytes_read = fileInput.read(buffer)) > 0) {
-				gzipOuputStream.write(buffer, 0, bytes_read);
+			while ((bytesRead = fileInput.read(buffer)) > 0) {
+				gzipOuputStream.write(buffer, 0, bytesRead);
 			}
 
 			fileInput.close();
