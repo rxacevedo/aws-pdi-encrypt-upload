@@ -1,7 +1,8 @@
 # AWS PDI Encrypt
 
 A tiny app that can:
-- Take a file and zip it (GZIP)
+- Take a file or directory path
+- Zip the file to gzip
 - Securely/unsececurely upload to S3
 
 
@@ -38,10 +39,7 @@ awsProfilePath=
 # Request retry count   
 retryCount=10   
 
-
-# Source directory on local   
-srcDir=   
-# Directory to store generated key file   
+# Directory to store generated key file      
 keyDir=   
 # Directory to store encrypted data for upload (can be same as srcDir)   
 dataDir=   
@@ -54,7 +52,7 @@ enableZip=false
 
 ## Run
 Need to pass the following arguments:
-- fileName
+- fileOrDirectory
 - propertiesPath
 
 

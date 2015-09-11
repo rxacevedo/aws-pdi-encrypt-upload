@@ -24,7 +24,6 @@ public class AwsProperties {
 	private String awsProfilePath;
 
 	private int retryCount;
-	private String srcDir;
 	private String keyDir;
 	private String dataDir;
 
@@ -55,7 +54,6 @@ public class AwsProperties {
     			s3prefix = prop.getProperty("s3prefix");
     			awsProfilePath = prop.getProperty("awsProfilePath");
     			retryCount = Integer.parseInt(prop.getProperty("retryCount"));
-    			srcDir = prop.getProperty("srcDir");
     			keyDir = prop.getProperty("keyDir");
     			dataDir = prop.getProperty("dataDir");
     			sendEncrypted = ("false".equals((String) 
@@ -76,59 +74,118 @@ public class AwsProperties {
         }
 	}
 
-	public String getMasterSymmetricKey() {
+	/**
+	 * 
+	 * @return master symmetric key
+	 */
+	public final String getMasterSymmetricKey() {
 		return masterSymmetricKey;
 	}
 
-	public String getAlgorithm() {
+
+	/**
+	 * 
+	 * @return algorithm (AES)
+	 */
+	public final String getAlgorithm() {
 		return algorithm;
 	}
 
-	public int getAlgorithmKeyLength() {
+
+	/**
+	 * 
+	 * @return algorithm length (128,256..)
+	 */
+	public final int getAlgorithmKeyLength() {
 		return algorithmKeyLength;
 	}
 
-	public String getS3endpoint() {
+
+	/**
+	 * 
+	 * @return S3 endpoint
+	 */
+	public final String getS3endpoint() {
 		return s3endpoint;
 	}
 
-	public String getS3region() {
+
+	/**
+	 * 
+	 * @return S3 region
+	 */
+	public final String getS3region() {
 		return s3region;
 	}
 
-	public String getS3bucket() {
+
+	/**
+	 * 
+	 * @return S3 bucket
+	 */
+	public final String getS3bucket() {
 		return s3bucket;
 	}
 
-	public String getS3prefix() {
+
+	/**
+	 * 
+	 * @return prefix ("folder") to store on S3
+	 */
+	public final String getS3prefix() {
 		return s3prefix;
 	}
 
-	public String getAwsProfilePath() {
+
+	/**
+	 * 
+	 * @return path of AWS profile info
+	 */
+	public final String getAwsProfilePath() {
 		return awsProfilePath;
 	}
 
-	public int getRetryCount() {
+	/**
+	 * 
+	 * @return number times to retry a process
+	 */
+	public final int getRetryCount() {
 		return retryCount;
 	}
 
-	public String getSrcDir() {
-		return srcDir;
-	}
 
-	public String getKeyDir() {
+	/**
+	 * 
+	 * @return dir to store keys in
+	 */
+	public final String getKeyDir() {
 		return keyDir;
 	}
 
-	public String getDataDir() {
+
+	/**
+	 * 
+	 * @return data dir to store temp loads
+	 */
+	public final String getDataDir() {
 		return dataDir;
 	}
 
-	public boolean isSendEncrypted() {
+
+	/**
+	 * 
+	 * @return whether to send encrypted
+	 */
+	public final boolean isSendEncrypted() {
 		return sendEncrypted;
 	}
 
-	public boolean isEnableZip() {
+
+	/**
+	 * 
+	 * @return is zip enabled
+	 */
+	public final boolean isEnableZip() {
 		return enableZip;
 	}
 }

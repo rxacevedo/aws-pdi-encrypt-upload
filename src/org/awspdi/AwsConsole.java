@@ -12,7 +12,14 @@ import org.apache.commons.cli.ParseException;
  *
  */
 public class AwsConsole {
-	private static String fileName;
+	/**
+	 * 
+	 */
+	private static String fileOrDirectory;
+	
+	/**
+	 * 
+	 */
 	private static String propertiesPath;
 
 	/**
@@ -30,12 +37,13 @@ public class AwsConsole {
 			// Gzip file for smaller footprint. Redshift can handle this later
 			if (awsProperties.isEnableZip()) {
 		    	CompressFileGzip gZipFile = new CompressFileGzip();
-				gZipFile.gzipFile(awsProperties.getSrcDir() + "/" + fileName, 
+				gZipFile.gzipFile(fileOrDirectory, 
 						awsProperties.getDataDir());				
 			}
 			
 			S3Service s3Service = new S3Service(awsProperties);
-			s3Service.uploadToS3(awsProperties.getSrcDir() + "/" + fileName);
+			s3Service.uploadToS3(fileOrDirectory);
+			System.out.println("Upload Complete");
 		} else {
 			System.out.println("All required arguments were not populated. "
 					+ "Please try again.");
@@ -52,8 +60,8 @@ public class AwsConsole {
 			final String [] args) {
 		// create Options object
 		Options options = new Options();
-		options.addOption("fileName", true,
-				"Name of the file to be encrypyed and uploaded");
+		options.addOption("fileOrDirectory", true,
+				"Name of the file or directory to be (encrypyed and) uploaded");
 		options.addOption("propertiesPath", true,
 				"Path to the properties file");
 		
@@ -61,13 +69,14 @@ public class AwsConsole {
 		CommandLine cmd;
 		try {
 			cmd = parser.parse(options, args);
-			fileName = cmd.getOptionValue("fileName");
+			fileOrDirectory = cmd.getOptionValue("fileOrDirectory");
 			propertiesPath = cmd.getOptionValue("propertiesPath");
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		return (fileName == null || propertiesPath == null ? false : true);
+		return (fileOrDirectory == null || propertiesPath == null ? false 
+				: true);
 	}
 }

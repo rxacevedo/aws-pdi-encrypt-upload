@@ -4,18 +4,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-
-import org.awspdi.AwsProperties;
-import org.junit.Assert;
 
 import org.apache.commons.codec.binary.Base64;
 
@@ -59,8 +53,10 @@ public class GenerateSymmetricMasterKey {
 //	        saveSymmetricKey(keyDir, symKey);
 	        
 	        //Load key.
-//	        SecretKey symKeyLoaded = loadSymmetricAESKey(awsProperties.getAlgorithm());
-//	        Assert.assertTrue(Arrays.equals(symKey.getEncoded(), symKeyLoaded.getEncoded()));
+//	        SecretKey symKeyLoaded = loadSymmetricAESKey(awsProperties
+//	        .getAlgorithm());
+//	        Assert.assertTrue(Arrays.equals(symKey.getEncoded(), 
+//	        symKeyLoaded.getEncoded()));
 	        
 		} catch (NoSuchAlgorithmException e1) {
 			// TODO Auto-generated catch block
@@ -107,23 +103,23 @@ public class GenerateSymmetricMasterKey {
         return new SecretKeySpec(encodedPrivateKey, algorithm);
     }
 
-    public String getKeyDir() {
+    public final String getKeyDir() {
 		return keyDir;
 	}
 
-	public void setKeyDir(String keyDir) {
-		GenerateSymmetricMasterKey.keyDir = keyDir;
+	public final void setKeyDir(final String keyDirVar) {
+		GenerateSymmetricMasterKey.keyDir = keyDirVar;
 	}
 
-	public String getKeyName() {
+	public final String getKeyName() {
 		return keyName;
 	}
 
-	public void setKeyName(String keyName) {
-		GenerateSymmetricMasterKey.keyName = keyName;
+	public final void setKeyName(final String keyNameVar) {
+		GenerateSymmetricMasterKey.keyName = keyNameVar;
 	}
 
-	public String getSymmetricMasterKey() {
+	public final String getSymmetricMasterKey() {
 		return symmetricMasterKey;
 	}
 }

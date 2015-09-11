@@ -136,7 +136,7 @@ public final class S3Service {
 
             System.out.println("Uploading a new object to S3 from a file\n");
             awsClient.putObject(new PutObjectRequest(s3bucket, 
-            		fileToUpload.getName(), fileToUpload));
+            		s3prefix + "/" + fileToUpload.getName(), fileToUpload));
 
         } catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means "
@@ -216,7 +216,9 @@ public final class S3Service {
                 while (!done) {
                     try {
                         if (sendEncrypted) {
-                			uploadToS3Encrypted(fileEntry);
+                			//uploadToS3Encrypted(fileEntry);
+                        	System.out.println("Encrypted bulk load isn't "
+                        			+ "working yet unfortunately... soz");
                 		} else {
                 			uploadToS3Unencrypted(fileEntry);
                 		}
@@ -239,8 +241,8 @@ public final class S3Service {
                         }
 
                     }
-                } // while
-            } // for
+                }
+            }
         }
     }
 }
