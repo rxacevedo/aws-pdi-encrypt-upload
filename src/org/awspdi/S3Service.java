@@ -23,6 +23,10 @@ import com.amazonaws.services.s3.model.EncryptionMaterials;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 
 /**
+ * 
+ * The S3 service supports both encrypted and unencrypted uploads.
+ * Most of this is your typical AWS SDK stuff...
+ * 
  * Many thanks to: http://yoshidashingo.hatenablog.com/entry/2014/08/10/193631
  * for some valuable suggestions/additions.
  * 
@@ -34,17 +38,17 @@ public final class S3Service {
 	private static String s3bucket;
 	private static String s3prefix;
     private static String s3endpoint;
-    private static String masterSymmetricKey;
-    private static String algorithm;
-    private static int algorithmKeyLength;
-    private static int retryCount;
-    private static String keyDir;
-	private static boolean enableZip;
-	private static boolean sendEncrypted;
+    private static String awsMasterSymmetricKey;
+    private static boolean awsMSKPopulated;
+    private static String awsAlgorithm;
+    private static int awsAlgorithmKeyLength;
+    private static String awsLocalKeyDir;
+	private static boolean awsSendEncrypted;
 	private static AWSCredentials awsCredentials;
 	private static AmazonS3EncryptionClient awsEncryptionClient;
 	private static AmazonS3 awsClient;
 	private static EncryptionMaterials materials;
+	private static GenerateSymmetricMasterKey newKey;
     
     /**
      * 
@@ -55,36 +59,37 @@ public final class S3Service {
     	s3bucket = awsProperties.getS3bucket();
     	s3prefix = awsProperties.getS3prefix();
     	s3endpoint = awsProperties.getS3endpoint();
-    	masterSymmetricKey = awsProperties.getMasterSymmetricKey();
-    	algorithm = awsProperties.getAlgorithm();
-    	algorithmKeyLength = awsProperties.getAlgorithmKeyLength();
-    	retryCount = awsProperties.getRetryCount();
-    	keyDir = awsProperties.getKeyDir();
-    	enableZip = awsProperties.isEnableZip();
-    	sendEncrypted = awsProperties.isSendEncrypted();
+    	awsMasterSymmetricKey = awsProperties.getAwsMasterSymmetricKey();
+    	awsMSKPopulated = awsProperties.isAwsMSKPopulated();
+    	awsAlgorithm = awsProperties.getAwsAlgorithm();
+    	awsAlgorithmKeyLength = awsProperties.getAwsAlgorithmKeyLength();
+    	awsLocalKeyDir = awsProperties.getAwsLocalKeyDir();
+    	awsSendEncrypted = awsProperties.isSendEncrypted();
 
         try {
         	ProfilesConfigFile profileConfig = new ProfilesConfigFile(
         			awsProperties.getAwsProfilePath());
             awsCredentials = new ProfileCredentialsProvider(
-            		profileConfig, "AWSProfile").getCredentials();
+            		profileConfig, awsProperties.getAwsProfileName())
+            		.getCredentials();
         } catch (Exception e) {
             throw new AmazonClientException(
                     "Cannot load the credentials from the credential "
             		+ "profiles file.", e);
         }
-        
-        if (sendEncrypted) {
-        	String msk = masterSymmetricKey;
-        	if (msk == null || msk.trim().isEmpty()) {
-        		GenerateSymmetricMasterKey newKey = 
-        				new GenerateSymmetricMasterKey(keyDir, "NewKey.key", 
-        						algorithm, algorithmKeyLength);
+
+        if (awsSendEncrypted) {
+        	
+        	// If key is not populated we need to generate one
+        	String msk = awsMasterSymmetricKey;
+        	if (!awsMSKPopulated) {
+        		newKey = new GenerateSymmetricMasterKey(awsLocalKeyDir, 
+        				"Key.key", awsAlgorithm, awsAlgorithmKeyLength);
         		msk = newKey.getSymmetricMasterKey();
         	}
         	
         	SecretKey symmetricKey = new SecretKeySpec(
-                        Base64.decodeBase64(msk.getBytes()), algorithm);
+                        Base64.decodeBase64(msk.getBytes()), awsAlgorithm);
 
             materials = new EncryptionMaterials(symmetricKey);        
 
@@ -94,38 +99,17 @@ public final class S3Service {
         } else {
         	awsClient = new AmazonS3Client(awsCredentials);
         	awsClient.setEndpoint(s3endpoint);
-//          Region usWest2 = Region.getRegion(Regions.US_WEST_2);
+//          TODO Support regional assignment
+//        	Region usWest2 = Region.getRegion(Regions.US_WEST_2);
 //        	awsClient.setRegion(usWest2);
         }
     }
     
     /**
      * 
-     * @param filePath to upload (excluding .gzip)
-     */
-    public void uploadToS3(final String filePath) {
-    	
-    	File file = new File(filePath);
-    	
-    	if (file.exists() && file.isDirectory()) {
-    		retrieveAllFilesAndUpload(file);
-    	} else if (file.exists() && file.isFile()) {
-    		String adjustedFilePath = filePath + (enableZip ? ".gzip" : "");
-        	File fileToUpload = new File(adjustedFilePath);
-
-            if (sendEncrypted) {
-    			uploadToS3Encrypted(fileToUpload);
-    		} else {
-    			uploadToS3Unencrypted(fileToUpload);
-    		}    		
-    	}    	
-    }
-    
-    /**
-     * 
      * @param fileToUpload 
      */
-    public static void uploadToS3Unencrypted(final File fileToUpload) {
+    public void uploadToS3Unencrypted(final File fileToUpload) {
 
     	// TODO: add support for UUID random names
         // String objectKey = UUID.randomUUID().toString();
@@ -160,7 +144,7 @@ public final class S3Service {
      * 
      * @param fileToUpload 
      */
-    public static void uploadToS3Encrypted(final File fileToUpload) {        
+    public void uploadToS3Encrypted(final File fileToUpload) {        
 
         try {
             System.out.println("Uploading a new object to S3 object '"
@@ -194,55 +178,9 @@ public final class S3Service {
     
     /**
      * 
-     * @param folder to retrieve files from
+     * @return newly generated key 
      */
-    private static void retrieveAllFilesAndUpload(final File folder) {
-
-        System.out.println("Reading files from directory " + folder);
-
-        for (final File fileEntry : folder.listFiles()) {
-        	
-        	// If encrypted then we only want to pull gzip files from dir
-        	// Else we pull all files.
-        	boolean encryptedOrNot =  (((sendEncrypted 
-        			&& fileEntry.getName().toLowerCase().endsWith(".gzip")) 
-        			|| !sendEncrypted) ? true : false);
-        	
-        	// Skip sub directories and if encrypted only pull gzip files
-            if (!fileEntry.isDirectory() && encryptedOrNot) { 
-            	
-                int retryCounter = 0;
-                boolean done = false;
-                while (!done) {
-                    try {
-                        if (sendEncrypted) {
-                			//uploadToS3Encrypted(fileEntry);
-                        	System.out.println("Encrypted bulk load isn't "
-                        			+ "working yet unfortunately... soz");
-                		} else {
-                			uploadToS3Unencrypted(fileEntry);
-                		}
-                        done = true;
-                    } catch (Exception e) {
-                        retryCounter++;
-                        if (retryCounter > retryCount) {
-                            System.out.println(
-                            		"Retry count exceeded max retry count "
-                                            + retryCount + ". Giving up");
-                            throw new RuntimeException(e);
-                        }
-
-                        // Do retry after 10 seconds.
-                        System.out.println("Failed to upload file " + fileEntry
-                                + ". Retrying...");
-                        try {
-                            Thread.sleep(10 * 1000);
-                        } catch (Exception te) {
-                        }
-
-                    }
-                }
-            }
-        }
+    public GenerateSymmetricMasterKey getNewKey() {
+    	return newKey;
     }
 }

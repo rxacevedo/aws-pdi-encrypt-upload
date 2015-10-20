@@ -21,9 +21,9 @@ aws_secret_access_key=
 ```
 # Base64 encoded AES 256 bit symmetric master key.    
 # Leave blank to generate one automatically   
-masterSymmetricKey=   
-algorithm=AES   
-algorithmKeyLength=256   
+awsMasterSymmetricKey=   
+awsAlgorithm=AES   
+awsAlgorithmKeyLength=256   
 
 # S3 properties   
 # Check yours @ http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region      
@@ -35,19 +35,23 @@ s3bucket=
 s3prefix=   
 # Amazon profile path   
 awsProfilePath=   
+# Amazon profile name (Default AWSProfile)   
+awsProfileName=   
 
 # Request retry count   
-retryCount=10   
+awsRetryCount=10   
 
-# Directory to store generated key file      
-keyDir=   
+# Directory to store generated key file.      
+# If populated it's assumed the master symmetric keys should be saved to specified location.      
+# If blank the keys will be presented via stdout.      
+awsLocalKeyDir=   
 # Directory to store encrypted data for upload (can be same as srcDir)   
-dataDir=   
+awsLocalDataDir=   
 
 # default true   
-sendEncrypted=true   
+awsSendEncrypted=true   
 # default true   
-enableZip=false     
+awsEnableZip=false     
 ```
 
 ## Run

@@ -1,5 +1,6 @@
 package org.awspdi;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -13,6 +14,11 @@ import java.util.zip.GZIPOutputStream;
 public class CompressFileGzip {
 	
 	/**
+	 * Drag and drop it, zip, unzip it...
+	 * 
+	 * If we desire to gzip the file before upload
+	 * then we rely on this class to handle the
+	 * zipping process.
 	 * 
 	 * @param sourceFilepath source file
 	 * @param destinatonZipFilepath (.gzip will be added)
@@ -23,9 +29,11 @@ public class CompressFileGzip {
 		byte[] buffer = new byte[1024];
 
 		try {
+			File file = new File(sourceFilepath);
 			
 			FileOutputStream fileOutputStream = 
-					new FileOutputStream(destinatonZipFilepath + ".gzip");
+					new FileOutputStream(destinatonZipFilepath + "/"
+							+ file.getName() + ".gzip");
 			GZIPOutputStream gzipOuputStream = 
 					new GZIPOutputStream(fileOutputStream);
 			FileInputStream fileInput = new FileInputStream(sourceFilepath);

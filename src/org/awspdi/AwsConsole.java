@@ -21,8 +21,16 @@ public class AwsConsole {
 	 * 
 	 */
 	private static String propertiesPath;
+	
+	/**
+	 * 
+	 */
+	private static AwsProperties awsProperties;
 
 	/**
+	 * Calls to check the input arguments from command line
+	 * before determining whether or not to execute
+	 * the uploader.
 	 * 
 	 * @param args input arguments
 	 */
@@ -31,18 +39,13 @@ public class AwsConsole {
 		// aren't populated
 		if (checkAndPopulateInputArguments(args)) {
 			// Get Properties used in the process
-			AwsProperties awsProperties = 
+			awsProperties = 
 					new AwsProperties(propertiesPath);
+			AwsUploadToS3 s3Upload = new AwsUploadToS3(awsProperties, 
+					fileOrDirectory);
+			s3Upload.uploadToS3();
 			
-			// Gzip file for smaller footprint. Redshift can handle this later
-			if (awsProperties.isEnableZip()) {
-		    	CompressFileGzip gZipFile = new CompressFileGzip();
-				gZipFile.gzipFile(fileOrDirectory, 
-						awsProperties.getDataDir());				
-			}
 			
-			S3Service s3Service = new S3Service(awsProperties);
-			s3Service.uploadToS3(fileOrDirectory);
 			System.out.println("Upload Complete");
 		} else {
 			System.out.println("All required arguments were not populated. "
@@ -53,6 +56,8 @@ public class AwsConsole {
 	
 	/**
 	 * 
+	 * This checks the input arguments.
+	 * 
 	 * @param args 
 	 * @return confirm arguments populated
 	 */
@@ -61,7 +66,7 @@ public class AwsConsole {
 		// create Options object
 		Options options = new Options();
 		options.addOption("fileOrDirectory", true,
-				"Name of the file or directory to be (encrypyed and) uploaded");
+				"Name of the file or directory to be (encrypted and) uploaded");
 		options.addOption("propertiesPath", true,
 				"Path to the properties file");
 		
