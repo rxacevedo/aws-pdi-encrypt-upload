@@ -35,15 +35,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
  */
 public final class S3Service {
 	
-	private static String s3bucket;
-	private static String s3prefix;
-    private static String s3endpoint;
-    private static String awsMasterSymmetricKey;
-    private static boolean awsMSKPopulated;
-    private static String awsAlgorithm;
-    private static int awsAlgorithmKeyLength;
-    private static String awsLocalKeyDir;
-	private static boolean awsSendEncrypted;
+	private static AwsProperties awsProperties;
 	private static AWSCredentials awsCredentials;
 	private static AmazonS3EncryptionClient awsEncryptionClient;
 	private static AmazonS3 awsClient;
@@ -52,25 +44,16 @@ public final class S3Service {
     
     /**
      * 
-     * @param awsProperties props
+     * @param awsProps props
      */
-    S3Service(final AwsProperties awsProperties) {
-    	
-    	s3bucket = awsProperties.getS3bucket();
-    	s3prefix = awsProperties.getS3prefix();
-    	s3endpoint = awsProperties.getS3endpoint();
-    	awsMasterSymmetricKey = awsProperties.getAwsMasterSymmetricKey();
-    	awsMSKPopulated = awsProperties.isAwsMSKPopulated();
-    	awsAlgorithm = awsProperties.getAwsAlgorithm();
-    	awsAlgorithmKeyLength = awsProperties.getAwsAlgorithmKeyLength();
-    	awsLocalKeyDir = awsProperties.getAwsLocalKeyDir();
-    	awsSendEncrypted = awsProperties.isSendEncrypted();
+    S3Service(final AwsProperties awsProps) {
 
+    	awsProperties = awsProps;
         try {
         	ProfilesConfigFile profileConfig = new ProfilesConfigFile(
-        			awsProperties.getAwsProfilePath());
+        			awsProperties.awsProfilePath);
             awsCredentials = new ProfileCredentialsProvider(
-            		profileConfig, awsProperties.getAwsProfileName())
+            		profileConfig, awsProperties.awsProfileName)
             		.getCredentials();
         } catch (Exception e) {
             throw new AmazonClientException(
@@ -78,27 +61,30 @@ public final class S3Service {
             		+ "profiles file.", e);
         }
 
-        if (awsSendEncrypted) {
+        if (awsProperties.awsSendEncrypted) {
         	
         	// If key is not populated we need to generate one
-        	String msk = awsMasterSymmetricKey;
-        	if (!awsMSKPopulated) {
-        		newKey = new GenerateSymmetricMasterKey(awsLocalKeyDir, 
-        				"Key.key", awsAlgorithm, awsAlgorithmKeyLength);
+        	String msk = awsProperties.awsMasterSymmetricKey;
+        	if (!awsProperties.awsMSKPopulated) {
+        		newKey = new GenerateSymmetricMasterKey(
+        				awsProperties.awsLocalKeyDir, "Key.key", 
+        				awsProperties.awsAlgorithm, 
+        				awsProperties.awsAlgorithmKeyLength);
         		msk = newKey.getSymmetricMasterKey();
         	}
         	
         	SecretKey symmetricKey = new SecretKeySpec(
-                        Base64.decodeBase64(msk.getBytes()), awsAlgorithm);
+                        Base64.decodeBase64(msk.getBytes()), 
+                        awsProperties.awsAlgorithm);
 
             materials = new EncryptionMaterials(symmetricKey);        
 
             awsEncryptionClient = new AmazonS3EncryptionClient(awsCredentials, 
             		materials);
-            awsEncryptionClient.setEndpoint(s3endpoint);        	
+            awsEncryptionClient.setEndpoint(awsProperties.s3endpoint);        	
         } else {
         	awsClient = new AmazonS3Client(awsCredentials);
-        	awsClient.setEndpoint(s3endpoint);
+        	awsClient.setEndpoint(awsProperties.s3endpoint);
 //          TODO Support regional assignment
 //        	Region usWest2 = Region.getRegion(Regions.US_WEST_2);
 //        	awsClient.setRegion(usWest2);
@@ -116,11 +102,13 @@ public final class S3Service {
 
         try {
             System.out.println("Uploading a new object to S3 object '"
-                    + s3prefix + "' from file " + fileToUpload.getName());
+                    + awsProperties.s3prefix + "' from file " 
+            		+ fileToUpload.getName());
 
             System.out.println("Uploading a new object to S3 from a file\n");
-            awsClient.putObject(new PutObjectRequest(s3bucket, 
-            		s3prefix + "/" + fileToUpload.getName(), fileToUpload));
+            awsClient.putObject(new PutObjectRequest(awsProperties.s3bucket, 
+            		awsProperties.s3prefix + "/" + fileToUpload.getName(), 
+            		fileToUpload));
 
         } catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means "
@@ -148,10 +136,11 @@ public final class S3Service {
 
         try {
             System.out.println("Uploading a new object to S3 object '"
-                    + s3prefix + "' from file " + fileToUpload.getName());
-            String key = s3prefix + "/" + fileToUpload.getName();
-            awsEncryptionClient.putObject(new PutObjectRequest(s3bucket, key, 
-            		fileToUpload));
+                    + awsProperties.s3prefix + "' from file " 
+            		+ fileToUpload.getName());
+            String key = awsProperties.s3prefix + "/" + fileToUpload.getName();
+            awsEncryptionClient.putObject(new PutObjectRequest(
+            		awsProperties.s3bucket, key, fileToUpload));
 
         } catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means "

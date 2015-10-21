@@ -7,83 +7,89 @@ import java.util.Properties;
 
 /**
  * 
- * Loads the properties file from the specified path.
- * 
- * @author Kristofer Ranström
+ * @author Aenarion
  *
  */
-public class AwsProperties {
+public enum AwsProperties {
+	INSTANCE;
 	
-	InputStream input;
-	private String awsMasterSymmetricKey;
-	private boolean awsMSKPopulated;
-	private String awsAlgorithm;
-	private int awsAlgorithmKeyLength;
+	String awsMasterSymmetricKey;
+	boolean awsMSKPopulated;
+	String awsAlgorithm;
+	int awsAlgorithmKeyLength;
 
-	private String s3endpoint;
-	private String s3region;
-	private String s3bucket;
-	private String s3prefix;
-	private String awsProfilePath;
-	private String awsProfileName;
+	String s3endpoint;
+	String s3region;
+	String s3bucket;
+	String s3prefix;
+	String awsProfilePath;
+	String awsProfileName;
 
-	private int awsRetryCount;
-	private String awsLocalKeyDir;
-	private boolean okToSaveKeys;
-	private String awsLocalDataDir;
+	int awsRetryCount;
+	String awsLocalKeyDir;
+	boolean okToSaveKeys;
+	String awsLocalDataDir;
 
-	private boolean awsSendEncrypted;
-	private boolean awsEnableZip;
+	boolean awsSendEncrypted;
+	boolean awsEnableZip;
+
+	/**
+	 * 
+	 */
+	private AwsProperties() {
+	}
 	
 	/**
 	 * 
-	 * @param filename location of properties file
+	 * @param filePath to load properties from 
+	 * @return AwsPropertiesSingleton object
 	 */
-	public AwsProperties(final String filename) {
-
-    	Properties prop = new Properties();
+	public AwsProperties loadPropertiesFromPath(
+			final String filePath) {
+		
+		AwsProperties awsProps = AwsProperties.INSTANCE;
+		
+		Properties prop = new Properties();
+		InputStream input = null;
     	
-    	try {
-    		input = new FileInputStream(filename);
-    		if (input == null) {
-    	            System.out.println("Can't find properties " + filename);
-    		} else {
-    			prop.load(input);
-    			awsMasterSymmetricKey = prop
-    					.getProperty("awsMasterSymmetricKey");
-    			awsMSKPopulated = (awsMasterSymmetricKey == null 
-    					|| awsMasterSymmetricKey.trim().isEmpty() ? false 
-    							: true);
-    			awsAlgorithm = prop.getProperty("awsAlgorithm");
-    			awsAlgorithmKeyLength = Integer.parseInt(prop
-    					.getProperty("awsAlgorithmKeyLength"));
-    			s3endpoint = prop.getProperty("s3endpoint");
-    			s3region = prop.getProperty("s3region");
-    			s3bucket = prop.getProperty("s3bucket");
-    			s3prefix = prop.getProperty("s3prefix");
-    			awsProfilePath = prop.getProperty("awsProfilePath");
-    			
-    			// Populate awsProfileName (default AWSProfile)
-    			String profileName = prop.getProperty("awsProfileName");
-    			if (profileName == null || profileName.trim().isEmpty()) {
-    				profileName = "AWSProfile";
-    			}
-    			awsProfileName = profileName;
-    			
-    			awsRetryCount = Integer.parseInt(prop
-    					.getProperty("awsRetryCount"));
-    			
-    			awsLocalKeyDir = prop.getProperty("awsLocalKeyDir");
-    			okToSaveKeys = (awsLocalKeyDir == null 
-    					|| awsLocalKeyDir.trim().isEmpty() ? false 
-    							: true);
-    			
-    			awsLocalDataDir = prop.getProperty("awsLocalDataDir");
-    			awsSendEncrypted = ("false".equals((String) 
-    					prop.getProperty("awsSendEncrypted")) ? false : true);
-    			awsEnableZip = ("false".equals((String) 
-    					prop.getProperty("awsEnableZip")) ? false : true); 
-    		}
+    	try (FileInputStream fos = new FileInputStream(filePath)) {
+    		input = fos;
+			prop.load(input);
+			
+			this.awsMasterSymmetricKey = prop
+					.getProperty("awsMasterSymmetricKey");
+			this.awsMSKPopulated = (awsMasterSymmetricKey == null 
+					|| awsMasterSymmetricKey.trim().isEmpty() ? false 
+							: true);
+			this.awsAlgorithm = prop.getProperty("awsAlgorithm");
+			this.awsAlgorithmKeyLength = Integer.parseInt(prop
+					.getProperty("awsAlgorithmKeyLength"));
+			this.s3endpoint = prop.getProperty("s3endpoint");
+			this.s3region = prop.getProperty("s3region");
+			this.s3bucket = prop.getProperty("s3bucket");
+			this.s3prefix = prop.getProperty("s3prefix");
+			this.awsProfilePath = prop.getProperty("awsProfilePath");
+			
+			// Populate awsProfileName (default AWSProfile)
+			String profileName = prop.getProperty("awsProfileName");
+			if (profileName == null || profileName.trim().isEmpty()) {
+				profileName = "AWSProfile";
+			}
+			this.awsProfileName = profileName;
+			
+			this.awsRetryCount = Integer.parseInt(prop
+					.getProperty("awsRetryCount"));
+			
+			this.awsLocalKeyDir = prop.getProperty("awsLocalKeyDir");
+			this.okToSaveKeys = (awsLocalKeyDir == null 
+					|| awsLocalKeyDir.trim().isEmpty() ? false 
+							: true);
+			
+			this.awsLocalDataDir = prop.getProperty("awsLocalDataDir");
+			this.awsSendEncrypted = ("false".equals((String) 
+					prop.getProperty("awsSendEncrypted")) ? false : true);
+			this.awsEnableZip = ("false".equals((String) 
+					prop.getProperty("awsEnableZip")) ? false : true); 
     	} catch (IOException ex) {
     		ex.printStackTrace();
         } finally {
@@ -95,147 +101,6 @@ public class AwsProperties {
         		}
         	}
         }
-	}
-
-	/**
-	 * 
-	 * @return master symmetric key
-	 */
-	public final String getAwsMasterSymmetricKey() {
-		return awsMasterSymmetricKey;
-	}
-
-
-	/**
-	 * 
-	 * @return algorithm (AES)
-	 */
-	public final String getAwsAlgorithm() {
-		return awsAlgorithm;
-	}
-
-
-	/**
-	 * 
-	 * @return algorithm length (128,256..)
-	 */
-	public final int getAwsAlgorithmKeyLength() {
-		return awsAlgorithmKeyLength;
-	}
-
-
-	/**
-	 * 
-	 * @return S3 endpoint
-	 */
-	public final String getS3endpoint() {
-		return s3endpoint;
-	}
-
-
-	/**
-	 * 
-	 * @return S3 region
-	 */
-	public final String getS3region() {
-		return s3region;
-	}
-
-
-	/**
-	 * 
-	 * @return S3 bucket
-	 */
-	public final String getS3bucket() {
-		return s3bucket;
-	}
-
-
-	/**
-	 * 
-	 * @return prefix ("folder") to store on S3
-	 */
-	public final String getS3prefix() {
-		return s3prefix;
-	}
-
-
-	/**
-	 * 
-	 * @return path of AWS profile info
-	 */
-	public final String getAwsProfilePath() {
-		return awsProfilePath;
-	}
-
-
-	/**
-	 * 
-	 * @return path of AWS profile info
-	 */
-	public final String getAwsProfileName() {
-		return awsProfileName;
-	}
-
-	/**
-	 * 
-	 * @return number times to retry a process
-	 */
-	public final int getAwsRetryCount() {
-		return awsRetryCount;
-	}
-
-
-	/**
-	 * 
-	 * @return dir to store keys in
-	 */
-	public final String getAwsLocalKeyDir() {
-		return awsLocalKeyDir;
-	}
-
-
-	/**
-	 * 
-	 * @return data dir to store temp loads
-	 */
-	public final String getAwsLocalDataDir() {
-		return awsLocalDataDir;
-	}
-
-
-	/**
-	 * 
-	 * @return whether to send encrypted
-	 */
-	public final boolean isSendEncrypted() {
-		return awsSendEncrypted;
-	}
-
-
-	/**
-	 * 
-	 * @return is zip enabled
-	 */
-	public final boolean isEnableZip() {
-		return awsEnableZip;
-	}
-
-
-	/**
-	 * 
-	 * @return is zip enabled
-	 */
-	public final boolean isAwsMSKPopulated() {
-		return awsMSKPopulated;
-	}
-
-
-	/**
-	 * 
-	 * @return is zip enabled
-	 */
-	public final boolean isOkToSaveKeys() {
-		return okToSaveKeys;
+		return awsProps;
 	}
 }

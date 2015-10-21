@@ -21,11 +21,6 @@ public class AwsConsole {
 	 * 
 	 */
 	private static String propertiesPath;
-	
-	/**
-	 * 
-	 */
-	private static AwsProperties awsProperties;
 
 	/**
 	 * Calls to check the input arguments from command line
@@ -39,9 +34,8 @@ public class AwsConsole {
 		// aren't populated
 		if (checkAndPopulateInputArguments(args)) {
 			// Get Properties used in the process
-			awsProperties = 
-					new AwsProperties(propertiesPath);
-			AwsUploadToS3 s3Upload = new AwsUploadToS3(awsProperties, 
+			AwsUploadToS3 s3Upload = new AwsUploadToS3(AwsProperties.INSTANCE
+					.loadPropertiesFromPath(propertiesPath), 
 					fileOrDirectory);
 			s3Upload.uploadToS3();
 			
