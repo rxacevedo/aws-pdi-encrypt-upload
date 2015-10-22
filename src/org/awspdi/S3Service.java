@@ -241,6 +241,8 @@ public final class S3Service {
             for (int i = 1; filePosition < contentLength; i++) {
                 // Last part can be less than 5 MB. Adjust part size.
             	partSize = Math.min(partSize, (contentLength - filePosition));
+            	boolean isLastPart = 
+            			ENCRYPTED_MULTI_PART_UPLOAD_SIZE > partSize;
             	
                 // Create request to upload a part.
                 UploadPartRequest uploadRequest = new UploadPartRequest()
@@ -248,7 +250,8 @@ public final class S3Service {
                     .withUploadId(initResponse.getUploadId()).withPartNumber(i)
                     .withFileOffset(filePosition)
                     .withFile(fileToUpload)
-                    .withPartSize(partSize);
+                    .withPartSize(partSize)
+                    .withLastPart(isLastPart);
 
                 // Upload part and add response to our list.
                 partETags.add(awsEncryptionClient.uploadPart(uploadRequest)

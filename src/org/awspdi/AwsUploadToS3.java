@@ -68,7 +68,7 @@ public class AwsUploadToS3 {
         	
 			S3Service s3Service = new S3Service(awsProperties);
             if (awsProperties.awsSendEncrypted) {
-    			s3Service.uploadToS3(fileToUpload);
+    			s3Service.uploadMultiPartToS3Encrypted(fileToUpload);
     			printOrSaveKey(s3Service, file.getName());
     		} else {
     			s3Service.uploadMultiPartToS3Unencrypted(fileToUpload);
@@ -124,7 +124,7 @@ public class AwsUploadToS3 {
                     try {
                         if (awsProperties.awsSendEncrypted) {
                 			S3Service s3Service = new S3Service(awsProperties);
-                			s3Service.uploadToS3(fileEntry);
+                			s3Service.uploadMultiPartToS3Encrypted(fileEntry);
                 			
                 			// If MSK is not populated we add keys to
                 			// a keymap that will be saved/stdouted
