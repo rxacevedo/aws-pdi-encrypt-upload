@@ -21,11 +21,6 @@ public class AwsConsole {
 	 * 
 	 */
 	private static String propertiesPath;
-	
-	/**
-	 * 
-	 */
-	private static AwsProperties awsProperties;
 
 	/**
 	 * Calls to check the input arguments from command line
@@ -39,11 +34,10 @@ public class AwsConsole {
 		// aren't populated
 		if (checkAndPopulateInputArguments(args)) {
 			// Get Properties used in the process
-			awsProperties = 
-					new AwsProperties(propertiesPath);
-			AwsUploadToS3 s3Upload = new AwsUploadToS3(awsProperties, 
+			AwsUploadToS3 s3Upload = new AwsUploadToS3(AwsProperties
+					.loadPropertiesFromPath(propertiesPath), 
 					fileOrDirectory);
-			s3Upload.uploadToS3();
+			s3Upload.uploadToS3Manager();
 			
 			
 			System.out.println("Upload Complete");
@@ -77,11 +71,9 @@ public class AwsConsole {
 			fileOrDirectory = cmd.getOptionValue("fileOrDirectory");
 			propertiesPath = cmd.getOptionValue("propertiesPath");
 		} catch (ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		return (fileOrDirectory == null || propertiesPath == null ? false 
-				: true);
+		return !(fileOrDirectory == null || propertiesPath == null);
 	}
 }

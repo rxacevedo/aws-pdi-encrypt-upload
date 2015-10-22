@@ -6,21 +6,29 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import javax.crypto.SecretKey;
-import javax.xml.stream.events.StartDocument;
-
 /**
  *  S3 Uploader is what handles management
  *  of leveraging the appropriate S3 service
  *  and uploading the file(s) from a given path.
  *  
- * @author Aenarion
+ * @author Kristofer Ranström
  *
  */
 public class AwsUploadToS3 {
 	
 	private static AwsProperties awsProperties;
 	private static String filePath;
+	
+	/**
+	 * 
+	 */
+	private static final String LOG_UPLOAD_BEGIN = 
+			"****BEGIN UPLOADED FILES & KEYS******";
+	/**
+	 * 
+	 */
+	private static final String LOG_UPLOAD_END = 
+			"****END UPLOADED FILES & KEYS******";
 	
 	/**
 	 * 
@@ -38,7 +46,7 @@ public class AwsUploadToS3 {
      *  This is the uploader that is called after
      *  class is instantiated.
      */
-    public final void uploadToS3() {
+    public final void uploadToS3Manager() {
     	
     	File file = new File(filePath);
     	
@@ -48,22 +56,22 @@ public class AwsUploadToS3 {
     		String adjustedFilePath = filePath;
     		
 			// Gzip file for smaller footprint. Redshift can handle this later
-			if (awsProperties.isEnableZip()) {
+			if (awsProperties.awsEnableZip) {
 		    	CompressFileGzip gZipFile = new CompressFileGzip();
 				gZipFile.gzipFile(filePath,
-						awsProperties.getAwsLocalDataDir());
-				adjustedFilePath = awsProperties.getAwsLocalDataDir()
+						awsProperties.awsLocalDataDir);
+				adjustedFilePath = awsProperties.awsLocalDataDir
 						+ "/" + file.getName() + ".gzip";
 			}
 			
         	File fileToUpload = new File(adjustedFilePath);
         	
 			S3Service s3Service = new S3Service(awsProperties);
-            if (awsProperties.isSendEncrypted()) {
-    			s3Service.uploadToS3Encrypted(fileToUpload);
+            if (awsProperties.awsSendEncrypted) {
+    			s3Service.uploadMultiPartToS3Encrypted(fileToUpload);
     			printOrSaveKey(s3Service, file.getName());
     		} else {
-    			s3Service.uploadToS3Unencrypted(fileToUpload);
+    			s3Service.uploadMultiPartToS3Unencrypted(fileToUpload);
     		}
     	}
     }
@@ -80,15 +88,15 @@ public class AwsUploadToS3 {
         HashMap<String, String> keyMap = new HashMap<String, String>();
 
         File fileFolder;        
-        if (awsProperties.isEnableZip()) {
-        	fileFolder = new File(awsProperties.getAwsLocalDataDir());
+        if (awsProperties.awsEnableZip) {
+        	fileFolder = new File(awsProperties.awsLocalDataDir);
 
         	// Zip file if this has been enabled
         	for (final File fileToZip : folder.listFiles()) {
-    			if (awsProperties.isEnableZip()) {
+    			if (awsProperties.awsEnableZip) {
     		    	CompressFileGzip gZipFile = new CompressFileGzip();
     				gZipFile.gzipFile(fileToZip.getAbsolutePath(),
-    						awsProperties.getAwsLocalDataDir());				
+    						awsProperties.awsLocalDataDir);				
     			}
         	}
         } else {
@@ -103,9 +111,9 @@ public class AwsUploadToS3 {
         	// Else we pull all files.
         	// This is to preserve scenario where unzipped files are located
         	// in the same directory as the zipped files
-        	boolean zippedOrNot =  (((awsProperties.isEnableZip() 
+        	boolean zippedOrNot =  ((awsProperties.awsEnableZip 
         			&& fileEntry.getName().toLowerCase().endsWith(".gzip")) 
-        			|| !awsProperties.isEnableZip()) ? true : false);
+        			|| !awsProperties.awsEnableZip);
         	
         	// Skip sub directories and if encrypted only pull gzip files
             if (!fileEntry.isDirectory() && zippedOrNot) {
@@ -114,13 +122,13 @@ public class AwsUploadToS3 {
                 boolean done = false;
                 while (!done) {
                     try {
-                        if (awsProperties.isSendEncrypted()) {
+                        if (awsProperties.awsSendEncrypted) {
                 			S3Service s3Service = new S3Service(awsProperties);
-                			s3Service.uploadToS3Encrypted(fileEntry);
+                			s3Service.uploadMultiPartToS3Encrypted(fileEntry);
                 			
                 			// If MSK is not populated we add keys to
                 			// a keymap that will be saved/stdouted
-                			if (!awsProperties.isAwsMSKPopulated()) {
+                			if (!awsProperties.awsMSKPopulated) {
                 				keyMap.put(fileEntry.getName(), 
                 						s3Service.getNewKey()
                 						.getSymmetricMasterKey());
@@ -129,17 +137,17 @@ public class AwsUploadToS3 {
                         			+ fileEntry.toString());
                 		} else {
                 			S3Service s3Service = new S3Service(awsProperties);
-                			s3Service.uploadToS3Unencrypted(fileEntry);
+                			s3Service.uploadMultiPartToS3Unencrypted(fileEntry);
                         	System.out.println("Uploaded: "
                         			+ fileEntry.toString());
                 		}
                         done = true;
                     } catch (Exception e) {
                         retryCounter++;
-                        if (retryCounter > awsProperties.getAwsRetryCount()) {
+                        if (retryCounter > awsProperties.awsRetryCount) {
                             System.out.println(
                             		"Retry count exceeded max retry count "
-                                            + awsProperties.getAwsRetryCount() 
+                                            + awsProperties.awsRetryCount 
                                             + ". Giving up");
                             throw new RuntimeException(e);
                         }
@@ -158,8 +166,8 @@ public class AwsUploadToS3 {
         
         // If encrypted and MSK is not populated
         // then we need to save the newly generated keys.
-        if (awsProperties.isSendEncrypted() 
-        		&& !awsProperties.isAwsMSKPopulated()) {
+        if (awsProperties.awsSendEncrypted 
+        		&& !awsProperties.awsMSKPopulated) {
         	saveOrOutputKeyMap(keyMap);
         }
     }
@@ -175,34 +183,36 @@ public class AwsUploadToS3 {
 	private static void saveOrOutputKeyMap(
 			final HashMap<String, String> keyMap) {
 		
-		if (!keyMap.isEmpty() && awsProperties.isOkToSaveKeys()) {
-			try {
-			    FileWriter writer = new FileWriter(awsProperties
-			    		.getAwsLocalKeyDir() + "/keyMap.csv");
-			    writer.append("Filename");
-			    writer.append(',');
-			    writer.append("MSK");
-			    writer.append('\n');
-
-			    for (Entry<String, String> entry : keyMap.entrySet()) {
-				    writer.append(entry.getKey());
+		if (!keyMap.isEmpty()) {
+			if (awsProperties.okToSaveKeys) {
+				try {
+				    FileWriter writer = new FileWriter(awsProperties
+				    		.awsLocalKeyDir + "/keyMap.csv");
+				    writer.append("Filename");
 				    writer.append(',');
-				    writer.append(entry.getValue());
-			        writer.append('\n');
+				    writer.append("MSK");
+				    writer.append('\n');
+	
+				    for (Entry<String, String> entry : keyMap.entrySet()) {
+					    writer.append(entry.getKey());
+					    writer.append(',');
+					    writer.append(entry.getValue());
+				        writer.append('\n');
+				    }
+				    
+				    writer.flush();
+				    writer.close();
+				} catch (IOException e) {
+				     e.printStackTrace();
+				}
+			} else {
+				System.out.println(LOG_UPLOAD_BEGIN);
+				for (Entry<String, String> entry : keyMap.entrySet()) {
+					System.out.println("File: " + entry.getKey()
+							+ " | Key: " + entry.getValue());
 			    }
-			    
-			    writer.flush();
-			    writer.close();
-			} catch (IOException e) {
-			     e.printStackTrace();
-			}	
-		} else if (!keyMap.isEmpty() && !awsProperties.isOkToSaveKeys()) {
-			System.out.println("****BEGIN UPLOADED FILES & KEYS******");
-			for (Entry<String, String> entry : keyMap.entrySet()) {
-				System.out.println("File: " + entry.getKey()
-						+ " | Key: " + entry.getValue());
-		    }
-			System.out.println("****END UPLOADED FILES & KEYS******");
+				System.out.println(LOG_UPLOAD_END);
+			}
 		} else {
 			System.out.println("Keymap is empty, nothing to write");
 		}
@@ -218,15 +228,15 @@ public class AwsUploadToS3 {
 	private static void printOrSaveKey(final S3Service s3Service, 
 			final String fileName) {
         // If MSK does not exist we need to save it
-        if (!awsProperties.isAwsMSKPopulated() 
-        		&& awsProperties.isOkToSaveKeys()) {
+        if (!awsProperties.awsMSKPopulated 
+        		&& awsProperties.okToSaveKeys) {
         	s3Service.getNewKey().saveSingleSymmetricKey(
         			 fileName + ".key", false);
         } else {
-        	System.out.println("****BEGIN UPLOADED FILE & KEY******\n"
+        	System.out.println(LOG_UPLOAD_BEGIN + "\n"
         			+ "File: " + fileName + " Key: " 
         			+ s3Service.getNewKey().getSymmetricMasterKey()
-        			+ "\n****END UPLOADED FILE & KEY******");
+        			+ "\n" + LOG_UPLOAD_END);
         }
 	}
 }
