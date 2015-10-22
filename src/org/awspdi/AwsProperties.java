@@ -4,6 +4,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
 
 /**
  * 
@@ -19,7 +21,7 @@ public enum AwsProperties {
 	int awsAlgorithmKeyLength;
 
 	String s3endpoint;
-	String s3region;
+	Region s3region;
 	String s3bucket;
 	String s3prefix;
 	String awsProfilePath;
@@ -65,7 +67,10 @@ public enum AwsProperties {
 			this.awsAlgorithmKeyLength = Integer.parseInt(prop
 					.getProperty("awsAlgorithmKeyLength"));
 			this.s3endpoint = prop.getProperty("s3endpoint");
-			this.s3region = prop.getProperty("s3region");
+			
+//			Regions region = Regions.valueOf(prop.getProperty("s3region"));
+//        	this.s3region = Region.getRegion(region);
+			
 			this.s3bucket = prop.getProperty("s3bucket");
 			this.s3prefix = prop.getProperty("s3prefix");
 			this.awsProfilePath = prop.getProperty("awsProfilePath");

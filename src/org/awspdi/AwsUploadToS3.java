@@ -6,9 +6,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import javax.crypto.SecretKey;
-import javax.xml.stream.events.StartDocument;
-
 /**
  *  S3 Uploader is what handles management
  *  of leveraging the appropriate S3 service
@@ -49,7 +46,7 @@ public class AwsUploadToS3 {
      *  This is the uploader that is called after
      *  class is instantiated.
      */
-    public final void uploadToS3() {
+    public final void uploadToS3Manager() {
     	
     	File file = new File(filePath);
     	
@@ -71,10 +68,10 @@ public class AwsUploadToS3 {
         	
 			S3Service s3Service = new S3Service(awsProperties);
             if (awsProperties.awsSendEncrypted) {
-    			s3Service.uploadToS3Encrypted(fileToUpload);
+    			s3Service.uploadToS3(fileToUpload);
     			printOrSaveKey(s3Service, file.getName());
     		} else {
-    			s3Service.uploadToS3Unencrypted(fileToUpload);
+    			s3Service.uploadMultiPartToS3Unencrypted(fileToUpload);
     		}
     	}
     }
@@ -127,7 +124,7 @@ public class AwsUploadToS3 {
                     try {
                         if (awsProperties.awsSendEncrypted) {
                 			S3Service s3Service = new S3Service(awsProperties);
-                			s3Service.uploadToS3Encrypted(fileEntry);
+                			s3Service.uploadToS3(fileEntry);
                 			
                 			// If MSK is not populated we add keys to
                 			// a keymap that will be saved/stdouted
@@ -140,7 +137,7 @@ public class AwsUploadToS3 {
                         			+ fileEntry.toString());
                 		} else {
                 			S3Service s3Service = new S3Service(awsProperties);
-                			s3Service.uploadToS3Unencrypted(fileEntry);
+                			s3Service.uploadMultiPartToS3Unencrypted(fileEntry);
                         	System.out.println("Uploaded: "
                         			+ fileEntry.toString());
                 		}

@@ -37,7 +37,7 @@ public class AwsConsole {
 			AwsUploadToS3 s3Upload = new AwsUploadToS3(AwsProperties.INSTANCE
 					.loadPropertiesFromPath(propertiesPath), 
 					fileOrDirectory);
-			s3Upload.uploadToS3();
+			s3Upload.uploadToS3Manager();
 			
 			
 			System.out.println("Upload Complete");
