@@ -3,6 +3,8 @@
 .project
 .settings/
 .checkstyle
+.metadata/
+bin/
 
 # Intellij
 .idea/
