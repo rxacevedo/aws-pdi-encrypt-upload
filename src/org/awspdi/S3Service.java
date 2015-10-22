@@ -63,8 +63,9 @@ public final class S3Service {
      * @param awsProps props
      */
     S3Service(final AwsProperties awsProps) {
-
+    	
     	awsProperties = awsProps;
+
         try {
         	ProfilesConfigFile profileConfig = new ProfilesConfigFile(
         			awsProperties.awsProfilePath);
@@ -107,6 +108,8 @@ public final class S3Service {
     }
     
     /**
+     * 
+     * METHOD no longer used in favor of multipart uploads.
      * 
      * This method can handle both encrypted and unencrypted uploads.
      * The client called is determined by the properties.
@@ -269,7 +272,7 @@ public final class S3Service {
         } catch (Exception e) {
         	awsEncryptionClient.abortMultipartUpload(
         			new AbortMultipartUploadRequest(
-        			awsProperties.s3bucket, key, 
+        					awsProperties.s3bucket, key, 
         			initResponse.getUploadId()));
         	System.out.println(e.getMessage());
         }

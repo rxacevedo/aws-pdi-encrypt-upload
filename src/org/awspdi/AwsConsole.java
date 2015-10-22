@@ -34,7 +34,7 @@ public class AwsConsole {
 		// aren't populated
 		if (checkAndPopulateInputArguments(args)) {
 			// Get Properties used in the process
-			AwsUploadToS3 s3Upload = new AwsUploadToS3(AwsProperties.INSTANCE
+			AwsUploadToS3 s3Upload = new AwsUploadToS3(AwsProperties
 					.loadPropertiesFromPath(propertiesPath), 
 					fileOrDirectory);
 			s3Upload.uploadToS3Manager();
@@ -71,11 +71,9 @@ public class AwsConsole {
 			fileOrDirectory = cmd.getOptionValue("fileOrDirectory");
 			propertiesPath = cmd.getOptionValue("propertiesPath");
 		} catch (ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		return (fileOrDirectory == null || propertiesPath == null ? false 
-				: true);
+		return !(fileOrDirectory == null || propertiesPath == null);
 	}
 }

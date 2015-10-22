@@ -11,7 +11,7 @@ import java.util.Map.Entry;
  *  of leveraging the appropriate S3 service
  *  and uploading the file(s) from a given path.
  *  
- * @author Aenarion
+ * @author Kristofer Ranström
  *
  */
 public class AwsUploadToS3 {
@@ -111,9 +111,9 @@ public class AwsUploadToS3 {
         	// Else we pull all files.
         	// This is to preserve scenario where unzipped files are located
         	// in the same directory as the zipped files
-        	boolean zippedOrNot =  (((awsProperties.awsEnableZip 
+        	boolean zippedOrNot =  ((awsProperties.awsEnableZip 
         			&& fileEntry.getName().toLowerCase().endsWith(".gzip")) 
-        			|| !awsProperties.awsEnableZip) ? true : false);
+        			|| !awsProperties.awsEnableZip);
         	
         	// Skip sub directories and if encrypted only pull gzip files
             if (!fileEntry.isDirectory() && zippedOrNot) {
