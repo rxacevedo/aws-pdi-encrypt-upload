@@ -52,6 +52,7 @@ public class AwsUploadToS3 {
     	
     	if (file.exists() && file.isDirectory()) {
     		retrieveAllFilesAndUpload(file);
+
     	} else if (file.exists() && file.isFile()) {
     		String adjustedFilePath = filePath;
     		

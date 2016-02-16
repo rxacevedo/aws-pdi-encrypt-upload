@@ -6,10 +6,12 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import java.io.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+
 /**
- * 
  * @author Kristofer Ranström
- *
  */
 public class AwsConsole {
 	/**
@@ -30,17 +32,27 @@ public class AwsConsole {
 	 * @param args input arguments
 	 */
 	public static void main(final String[] args) {
+
 		// Populate input args and do not execute if required arguments 
 		// aren't populated
 		if (checkAndPopulateInputArguments(args)) {
+
 			// Get Properties used in the process
+            try {
+
 			AwsUploadToS3 s3Upload = new AwsUploadToS3(AwsProperties
 					.loadPropertiesFromPath(propertiesPath), 
 					fileOrDirectory);
-			s3Upload.uploadToS3Manager();
 			
+                s3Upload.uploadToS3Manager();
 			
 			System.out.println("Upload Complete");
+
+            } catch (Exception e) {
+                System.out.println("Upload Failed");
+                e.printStackTrace();
+            }
+
 		} else {
 			System.out.println("All required arguments were not populated. "
 					+ "Please try again.");
@@ -49,23 +61,25 @@ public class AwsConsole {
 	}
 	
 	/**
-	 * 
 	 * This checks the input arguments.
 	 * 
 	 * @param args 
 	 * @return confirm arguments populated
 	 */
-	private static boolean checkAndPopulateInputArguments(
-			final String [] args) {
+    private static boolean checkAndPopulateInputArguments(final String[] args) {
+
 		// create Options object
 		Options options = new Options();
+
 		options.addOption("fileOrDirectory", true,
 				"Name of the file or directory to be (encrypted and) uploaded");
+
 		options.addOption("propertiesPath", true,
 				"Path to the properties file");
 		
 		CommandLineParser parser = new DefaultParser();
 		CommandLine cmd;
+
 		try {
 			cmd = parser.parse(options, args);
 			fileOrDirectory = cmd.getOptionValue("fileOrDirectory");

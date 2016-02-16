@@ -1,9 +1,13 @@
 package org.awspdi;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 //import java.util.UUID;
 import java.util.List;
+import java.security.MessageDigest;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -14,6 +18,8 @@ import org.awspdi.encrypt.GenerateSymmetricMasterKey;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.auth.profile.ProfilesConfigFile;
 import com.amazonaws.services.s3.AmazonS3;
@@ -24,8 +30,10 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.EncryptionMaterials;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
 /**
@@ -47,6 +55,7 @@ public final class S3Service {
 	private static AmazonS3 awsClient;
 	private static EncryptionMaterials materials;
 	private static GenerateSymmetricMasterKey newKey;
+  private static boolean ENV_CREDS;
 	
 	/**
 	 *  Multi part upload size.
@@ -66,6 +75,17 @@ public final class S3Service {
     	
     	awsProperties = awsProps;
 
+    if (!(null == System.getenv("AWS_ACCESS_KEY_ID") &&
+        null == System.getenv("AWS_SECRET_ACCESS_KEY"))) {
+
+      System.out.println("Loading credentials from env...");
+      ENV_CREDS = true;
+
+    } else {
+
+      System.out.println("Loading credentials from file...");
+      ENV_CREDS = false;
+
         try {
         	ProfilesConfigFile profileConfig = new ProfilesConfigFile(
         			awsProperties.awsProfilePath);
@@ -77,6 +97,8 @@ public final class S3Service {
                     "Cannot load the credentials from the credential "
             		+ "profiles file.", e);
         }
+
+    }
 
         if (awsProperties.awsSendEncrypted) {
         	
@@ -96,69 +118,19 @@ public final class S3Service {
 
             materials = new EncryptionMaterials(symmetricKey);        
 
-            awsEncryptionClient = new AmazonS3EncryptionClient(awsCredentials, 
-            		materials);
+      StaticEncryptionMaterialsProvider matsProvider = new StaticEncryptionMaterialsProvider(materials);
+      awsEncryptionClient = ENV_CREDS ? new AmazonS3EncryptionClient(new EnvironmentVariableCredentialsProvider(), matsProvider)
+        : new AmazonS3EncryptionClient(awsCredentials, materials);
+
             awsEncryptionClient.setEndpoint(awsProperties.s3endpoint);
             // awsEncryptionClient.setRegion(awsProperties.s3region);   	
         } else {
-        	awsClient = new AmazonS3Client(awsCredentials);
+      System.out.println("Sending file unencrypted...");
+      awsClient = ENV_CREDS ? new AmazonS3Client(new EnvironmentVariableCredentialsProvider())
+        : new AmazonS3Client(awsCredentials);
         	awsClient.setEndpoint(awsProperties.s3endpoint);
         	// awsClient.setRegion(awsProperties.s3region);
         }
-    }
-    
-    /**
-     * 
-     * METHOD no longer used in favor of multipart uploads.
-     * 
-     * This method can handle both encrypted and unencrypted uploads.
-     * The client called is determined by the properties.
-     * 
-     * @param fileToUpload 
-     */
-    public void uploadToS3(final File fileToUpload) {
-    	// TODO: add support for UUID random names
-        // String objectKey = UUID.randomUUID().toString();     
-
-        try {
-            System.out.println("Uploading a new object to S3 object '"
-                    + awsProperties.s3prefix + "' from file " 
-            		+ fileToUpload.getName());
-            
-            if (awsProperties.awsSendEncrypted) {
-                String key = awsProperties.s3prefix + "/" 
-                		+ fileToUpload.getName();
-                awsEncryptionClient.putObject(new PutObjectRequest(
-                		awsProperties.s3bucket, key, 
-                		fileToUpload));            	
-            } else {
-                awsClient.putObject(new PutObjectRequest(
-                		awsProperties.s3bucket, 
-                		awsProperties.s3prefix + "/" + fileToUpload.getName(), 
-                		fileToUpload));            	
-            }
-            
-        } catch (AmazonServiceException ase) {
-            System.out.println("Caught an AmazonServiceException, which means "
-            		+ "your request made it to Amazon S3, but was rejected "
-            		+ "with an error response for some reason.");
-            System.out.println("Error Message:    " + ase.getMessage());
-            System.out.println("HTTP Status Code: " + ase.getStatusCode());
-            System.out.println("AWS Error Code:   " + ase.getErrorCode());
-            System.out.println("Error Type:       " + ase.getErrorType());
-            System.out.println("Request ID:       " + ase.getRequestId());
-
-            throw ase;
-        } catch (AmazonClientException ace) {
-            System.out
-                    .println("Caught an AmazonClientException, which means the "
-                    		+ "client encountered a serious internal problem "
-                    		+ "while trying to communicate with S3, such as "
-                    		+ "not being able to access the network.");
-            System.out.println("Error Message: " + ace.getMessage());
-            throw ace;
-        }
-    	
     }
     
     /**
@@ -215,6 +187,7 @@ public final class S3Service {
         	awsClient.abortMultipartUpload(new AbortMultipartUploadRequest(
         			awsProperties.s3bucket, key, 
         			initResponse.getUploadId()));
+      e.printStackTrace();
         }
     }
     
