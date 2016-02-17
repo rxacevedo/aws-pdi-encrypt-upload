@@ -4,7 +4,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 import com.amazonaws.regions.Region;
-// import com.amazonaws.regions.Regions;
 
 /**
  * 
@@ -12,24 +11,25 @@ import com.amazonaws.regions.Region;
  *
  */
 public enum AwsProperties {
+
 	INSTANCE;
 	
-	String awsMasterSymmetricKey;
-	boolean awsMSKPopulated;
-	String awsAlgorithm;
-	int awsAlgorithmKeyLength;
+	public String awsMasterSymmetricKey;
+	public boolean awsMSKPopulated;
+	public String awsAlgorithm;
+	public int awsAlgorithmKeyLength;
 
-	String s3endpoint;
-	Region s3region;
-	String s3bucket;
-	String s3prefix;
-	String awsProfilePath;
-	String awsProfileName;
+	public String s3endpoint;
+	public Region s3region;
+	public String s3bucket;
+	public String s3prefix;
+	public String awsProfilePath;
+	public String awsProfileName;
 
-	int awsRetryCount;
-	String awsLocalKeyDir;
-	boolean okToSaveKeys;
-	String awsLocalDataDir;
+	public int awsRetryCount;
+	public String awsLocalKeyDir;
+	public boolean okToSaveKeys;
+	public String awsLocalDataDir;
 
 	boolean awsSendEncrypted;
 	boolean awsEnableZip;
@@ -61,9 +61,6 @@ public enum AwsProperties {
 			INSTANCE.awsAlgorithmKeyLength = Integer.parseInt(prop
 					.getProperty("awsAlgorithmKeyLength"));
 			INSTANCE.s3endpoint = prop.getProperty("s3endpoint");
-			
-//			Regions region = Regions.valueOf(prop.getProperty("s3region"));
-//        	this.s3region = Region.getRegion(region);
 			
 			INSTANCE.s3bucket = prop.getProperty("s3bucket");
 			INSTANCE.s3prefix = prop.getProperty("s3prefix");

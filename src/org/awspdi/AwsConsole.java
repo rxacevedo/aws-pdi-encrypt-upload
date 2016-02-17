@@ -1,5 +1,14 @@
 package org.awspdi;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.auth.profile.ProfilesConfigFile;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3EncryptionClient;
+import com.amazonaws.services.s3.model.EncryptionMaterials;
+import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -14,6 +23,7 @@ import java.util.HashMap;
  * @author Kristofer Ranström
  */
 public class AwsConsole {
+	private static boolean ENV_CREDS = false;
 	/**
 	 * 
 	 */
@@ -23,6 +33,8 @@ public class AwsConsole {
 	 * 
 	 */
 	private static String propertiesPath;
+	private static AWSCredentials awsCredentials;
+	private static AwsProperties awsProperties;
 
 	/**
 	 * Calls to check the input arguments from command line
@@ -31,7 +43,13 @@ public class AwsConsole {
 	 * 
 	 * @param args input arguments
 	 */
-	public static void main(final String[] args) {
+	public static void main(String[] args) {
+
+	    // args = new String[4];
+		// args[0] = "-fileOrDirectory";
+		// args[1] = "/vagrant/pdi/files";
+		// args[2] = "-propertiesPath";
+		// args[3] = "/vagrant/pdi/aws.properties";
 
 		// Populate input args and do not execute if required arguments 
 		// aren't populated

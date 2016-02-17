@@ -1,5 +1,23 @@
 package org.awspdi;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.auth.profile.ProfilesConfigFile;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3EncryptionClient;
+import com.amazonaws.services.s3.model.EncryptionMaterials;
+import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
+import org.apache.commons.codec.binary.Base64;
+import org.awspdi.encrypt.GenerateSymmetricMasterKey;
+import org.awspdi.upload.EncryptedUploader;
+import org.awspdi.upload.IUploader;
+import org.awspdi.upload.Uploader;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -15,21 +33,12 @@ import java.util.Map.Entry;
  *
  */
 public class AwsUploadToS3 {
-	
+
+	private static boolean ENV_CREDS = false;
 	private static AwsProperties awsProperties;
+	private static AWSCredentialsProvider awsCredentials;
 	private static String filePath;
-	
-	/**
-	 * 
-	 */
-	private static final String LOG_UPLOAD_BEGIN = 
-			"****BEGIN UPLOADED FILES & KEYS******";
-	/**
-	 * 
-	 */
-	private static final String LOG_UPLOAD_END = 
-			"****END UPLOADED FILES & KEYS******";
-	
+
 	/**
 	 * 
 	 * @param props awsProperties
@@ -39,6 +48,35 @@ public class AwsUploadToS3 {
 			final String pathToLoad) {
 		awsProperties = props;
 		filePath = pathToLoad;
+
+		awsCredentials = null;
+
+		if (!(null == System.getenv("AWS_ACCESS_KEY_ID") &&
+				null == System.getenv("AWS_SECRET_ACCESS_KEY"))) {
+
+			System.out.println("Loading credentials from env...");
+			ENV_CREDS = true;
+
+		} else {
+
+			System.out.println("Loading credentials from file...");
+			ENV_CREDS = false;
+
+			try {
+				ProfilesConfigFile profileConfig = new ProfilesConfigFile(
+						awsProperties.awsProfilePath);
+
+				awsCredentials = new ProfileCredentialsProvider(
+						profileConfig, awsProperties.awsProfileName);
+
+			} catch (Exception e) {
+				throw new AmazonClientException(
+						"Cannot load the credentials from the credential "
+								+ "profiles file.", e);
+			}
+
+		}
+
 	}
 	
     
@@ -46,14 +84,49 @@ public class AwsUploadToS3 {
      *  This is the uploader that is called after
      *  class is instantiated.
      */
-    public final void uploadToS3Manager() {
-    	
+    public final void uploadToS3Manager() throws Exception {
+
+		AmazonS3Client awsClient;
+		if (awsProperties.awsSendEncrypted) {
+
+			GenerateSymmetricMasterKey newKey;
+
+			// If key is not populated we need to generate one
+			String msk = awsProperties.awsMasterSymmetricKey;
+			if (!awsProperties.awsMSKPopulated) {
+				newKey = new GenerateSymmetricMasterKey(
+						awsProperties.awsLocalKeyDir, "Key.key",
+						awsProperties.awsAlgorithm,
+						awsProperties.awsAlgorithmKeyLength);
+				msk = newKey.getSymmetricMasterKey();
+			}
+
+			SecretKey symmetricKey = new SecretKeySpec(
+			            Base64.decodeBase64(msk.getBytes()),
+			           awsProperties.awsAlgorithm);
+
+			EncryptionMaterials materials = new EncryptionMaterials(symmetricKey);
+
+			StaticEncryptionMaterialsProvider matsProvider = new StaticEncryptionMaterialsProvider(materials);
+			awsClient = new AmazonS3EncryptionClient(awsCredentials, matsProvider);
+
+			awsClient.setEndpoint(awsProperties.s3endpoint);
+			// awsEncryptionClient.setRegion(awsProperties.s3region);
+		} else {
+			System.out.println("Sending file unencrypted...");
+			awsClient = new AmazonS3Client(awsCredentials);
+			awsClient.setEndpoint(awsProperties.s3endpoint);
+			// awsClient.setRegion(awsProperties.s3region);
+		}
+
+
     	File file = new File(filePath);
     	
     	if (file.exists() && file.isDirectory()) {
-    		retrieveAllFilesAndUpload(file);
-
+			System.out.println("Initiating folder upload...");
+    		retrieveAllFilesAndUpload(awsClient, file);
     	} else if (file.exists() && file.isFile()) {
+			System.out.println("Initiating single file upload...");
     		String adjustedFilePath = filePath;
     		
 			// Gzip file for smaller footprint. Redshift can handle this later
@@ -64,16 +137,18 @@ public class AwsUploadToS3 {
 				adjustedFilePath = awsProperties.awsLocalDataDir
 						+ "/" + file.getName() + ".gzip";
 			}
-			
-        	File fileToUpload = new File(adjustedFilePath);
-        	
-			S3Service s3Service = new S3Service(awsProperties);
+
+			IUploader uploader;
+
             if (awsProperties.awsSendEncrypted) {
-    			s3Service.uploadMultiPartToS3Encrypted(fileToUpload);
-    			printOrSaveKey(s3Service, file.getName());
+				uploader = new EncryptedUploader(awsClient);
     		} else {
-    			s3Service.uploadMultiPartToS3Unencrypted(fileToUpload);
+				uploader = new Uploader(awsClient);
     		}
+
+			uploader.setUploadContent(adjustedFilePath);
+			uploader.setUploadContext(awsProperties);
+			uploader.upload();
     	}
     }
 	
@@ -84,9 +159,9 @@ public class AwsUploadToS3 {
      * 
      * @param folder to retrieve files from
      */
-    private static void retrieveAllFilesAndUpload(final File folder) {
-        
-        HashMap<String, String> keyMap = new HashMap<String, String>();
+    private static void retrieveAllFilesAndUpload(AmazonS3Client client, final File folder) {
+
+		HashMap<String, String> keyMap = new HashMap<String, String>();
 
         File fileFolder;        
         if (awsProperties.awsEnableZip) {
@@ -107,7 +182,7 @@ public class AwsUploadToS3 {
         System.out.println("Reading files from directory " + fileFolder);
 
         for (final File fileEntry : fileFolder.listFiles()) {
-        	
+
         	// If zipped then we only want to pull gzip files from dir
         	// Else we pull all files.
         	// This is to preserve scenario where unzipped files are located
@@ -123,121 +198,58 @@ public class AwsUploadToS3 {
                 boolean done = false;
                 while (!done) {
                     try {
+
                         if (awsProperties.awsSendEncrypted) {
-                			S3Service s3Service = new S3Service(awsProperties);
-                			s3Service.uploadMultiPartToS3Encrypted(fileEntry);
-                			
+
+							EncryptedUploader uploader = new EncryptedUploader(client);
+							uploader.setUploadContent(fileEntry);
+							uploader.setUploadContext(awsProperties);
+							uploader.upload();
+
                 			// If MSK is not populated we add keys to
                 			// a keymap that will be saved/stdouted
                 			if (!awsProperties.awsMSKPopulated) {
                 				keyMap.put(fileEntry.getName(), 
-                						s3Service.getNewKey()
+                						uploader.getNewKey()
                 						.getSymmetricMasterKey());
                 			}
+
                         	System.out.println("Uploaded: "
                         			+ fileEntry.toString());
                 		} else {
-                			S3Service s3Service = new S3Service(awsProperties);
-                			s3Service.uploadMultiPartToS3Unencrypted(fileEntry);
+							Uploader uploader = new Uploader(client);
+							uploader.setUploadContent(fileEntry);
+							uploader.setUploadContext(awsProperties);
+							uploader.upload();
+
                         	System.out.println("Uploaded: "
                         			+ fileEntry.toString());
                 		}
-                        done = true;
-                    } catch (Exception e) {
-                        retryCounter++;
-                        if (retryCounter > awsProperties.awsRetryCount) {
-                            System.out.println(
-                            		"Retry count exceeded max retry count "
-                                            + awsProperties.awsRetryCount 
-                                            + ". Giving up");
-                            throw new RuntimeException(e);
-                        }
 
-                        // Do retry after 10 seconds.
-                        System.out.println("Failed to upload file " + fileEntry
-                                + ". Retrying...");
-                        try {
-                            Thread.sleep(10 * 1000);
-                        } catch (Exception te) {
-                        }
-                    }
-                }
-            }
-        }
-        
-        // If encrypted and MSK is not populated
-        // then we need to save the newly generated keys.
-        if (awsProperties.awsSendEncrypted 
-        		&& !awsProperties.awsMSKPopulated) {
-        	saveOrOutputKeyMap(keyMap);
-        }
-    }
-	
-	/**
-	 *  Method saves newly generated keys as a CSV
-	 *  file into the local key directory.
-	 *  If no directory is defined it will simply
-	 *  output the contents to stdout.
-	 * 
-	 * @param keyMap key map to save
-	 */
-	private static void saveOrOutputKeyMap(
-			final HashMap<String, String> keyMap) {
-		
-		if (!keyMap.isEmpty()) {
-			if (awsProperties.okToSaveKeys) {
-				try {
-				    FileWriter writer = new FileWriter(awsProperties
-				    		.awsLocalKeyDir + "/keyMap.csv");
-				    writer.append("Filename");
-				    writer.append(',');
-				    writer.append("MSK");
-				    writer.append('\n');
-	
-				    for (Entry<String, String> entry : keyMap.entrySet()) {
-					    writer.append(entry.getKey());
-					    writer.append(',');
-					    writer.append(entry.getValue());
-				        writer.append('\n');
-				    }
-				    
-				    writer.flush();
-				    writer.close();
-				} catch (IOException e) {
-				     e.printStackTrace();
+                        done = true;
+
+                    } catch (Exception e) {
+						// TODO: I don't think this was ever actually doing anything...
+                        // retryCounter++;
+                        // if (retryCounter > awsProperties.awsRetryCount) {
+                        //     System.out.println(
+                        //     		"Retry count exceeded max retry count "
+                        //                     + awsProperties.awsRetryCount
+                        //                     + ". Giving up");
+                        //     throw new RuntimeException(e);
+                        // }
+
+                        // // Do retry after 10 seconds.
+                        // System.out.println("Failed to upload file " + fileEntry
+                        //         + ". Retrying...");
+                        // try {
+                        //     Thread.sleep(10 * 1000);
+                        // } catch (Exception te) {
+					}
 				}
-			} else {
-				System.out.println(LOG_UPLOAD_BEGIN);
-				for (Entry<String, String> entry : keyMap.entrySet()) {
-					System.out.println("File: " + entry.getKey()
-							+ " | Key: " + entry.getValue());
-			    }
-				System.out.println(LOG_UPLOAD_END);
 			}
-		} else {
-			System.out.println("Keymap is empty, nothing to write");
 		}
-	}
-	
-	/**
-	 *  Save or print key depending on whether key directory is
-	 *  specified.
-	 *  
-	 * @param s3Service that holds the key.
-	 * @param fileName for saving keyfile
-	 */
-	private static void printOrSaveKey(final S3Service s3Service, 
-			final String fileName) {
-        // If MSK does not exist we need to save it
-        if (!awsProperties.awsMSKPopulated 
-        		&& awsProperties.okToSaveKeys) {
-        	s3Service.getNewKey().saveSingleSymmetricKey(
-        			 fileName + ".key", false);
-        } else {
-        	System.out.println(LOG_UPLOAD_BEGIN + "\n"
-        			+ "File: " + fileName + " Key: " 
-        			+ s3Service.getNewKey().getSymmetricMasterKey()
-        			+ "\n" + LOG_UPLOAD_END);
-        }
+		// Only saves if applicable via awsProperties
+		EncryptedUploader.saveOrOutputKeyMap(keyMap, awsProperties);
 	}
 }
